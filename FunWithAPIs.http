@@ -1,0 +1,6 @@
+@FunWithAPIs_HostAddress = http://localhost:5245
+
+GET {{FunWithAPIs_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
