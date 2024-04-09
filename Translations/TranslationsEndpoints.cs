@@ -12,26 +12,30 @@ namespace FunWithAPIs.Translations
             group.MapGet(SpecificTranslationsRoute, async (string currentLanguageIsoCode = "en-US") =>
             {
                 var lang = currentLanguageIsoCode.Split('-');
-                LanguageIsoCode currentLangCode = Enum.Parse<LanguageIsoCode>(lang.First());
-                var transalations = await SpecificTranslations(currentLangCode);
-                if (lang.Length == 1)
+                if (Enum.TryParse<LanguageIsoCode>(lang.First(), out LanguageIsoCode currentLangCode)) 
                 {
-                    return Results.Ok(transalations.ToDictionary(d => d.Key, d => d.Value.FirstOrDefault(dd => dd.Key == LanguageVariationIsoCode.Default).Value));
-                }
-                return Results.Ok(transalations.ToDictionary(d => d.Key, d =>
-                {
-                    if (Enum.TryParse<LanguageVariationIsoCode>(lang.Last(), out LanguageVariationIsoCode languageVariationIsoCode))
+                    var transalations = await SpecificTranslations(currentLangCode);
+                    if (lang.Length == 1)
                     {
-                        var languageVariationTransalation = d.Value.FirstOrDefault(dd => dd.Key == languageVariationIsoCode).Value;
-                        if (!string.IsNullOrEmpty(languageVariationTransalation))
-                        {
-                            return languageVariationTransalation;
-                        }
+                        return Results.Ok(transalations.ToDictionary(d => d.Key, d => d.Value?.FirstOrDefault(dd => dd.Key == LanguageVariationIsoCode.Default).Value ?? ""));
                     }
-                    return d.Value.FirstOrDefault(dd => dd.Key == LanguageVariationIsoCode.Default).Value;
-                }));
+                    return Results.Ok(transalations.ToDictionary(d => d.Key, d =>
+                    {
+                        if (Enum.TryParse<LanguageVariationIsoCode>(lang.Last(), out LanguageVariationIsoCode languageVariationIsoCode))
+                        {
+                            var languageVariationTransalation = d.Value?.FirstOrDefault(dd => dd.Key == languageVariationIsoCode).Value;
+                            if (!string.IsNullOrEmpty(languageVariationTransalation))
+                            {
+                                return languageVariationTransalation;
+                            }
+                        }
+                        return d.Value?.FirstOrDefault(dd => dd.Key == LanguageVariationIsoCode.Default).Value ?? "";
+                    }));
+                }
+                return Results.NotFound(currentLanguageIsoCode);
             })
-            .Produces<Dictionary<string, string>>(StatusCodes.Status200OK);
+            .Produces<Dictionary<string, string>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
             return group;
         }
 
