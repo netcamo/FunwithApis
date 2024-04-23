@@ -4,32 +4,31 @@ namespace FunWithAPIs.Languages
 {
     public static class AllLanguagesEndpoint
     {
-        private const string AllLanguagesRoute = "/allLanguages/{currentCultureIsoCode}/";
+        private const string AllLanguagesRoute = "/allLanguages/{currentCultureIsoCodeString}/";
         public static RouteGroupBuilder GroupLanguagesApisV1(this RouteGroupBuilder group)
         {
-            group.MapGet(AllLanguagesRoute, async (string currentCultureIsoCode = "en-US") =>
+            group.MapGet(AllLanguagesRoute, async (string currentCultureIsoCodeString = "en-US") =>
             {
-                var currentLanguageIsoCode = currentCultureIsoCode.Split('-').First();
-
-                LanguageIsoCode currentLangCode = (Enum.TryParse(currentLanguageIsoCode, true, out LanguageIsoCode langCode)) ? langCode : LanguageIsoCode.en;
-
-                return Results.Ok(await GetAllLanguages(currentLangCode));
+                var currentCultureIsoCode = HumanHelper.CreateLanguageIsoCode(currentCultureIsoCodeString);
+                return Results.Ok(await GetAllLanguages(currentCultureIsoCode.LanguageId));
             })
             .Produces<Dictionary<LanguageIsoCode, LanguageNode>>(StatusCodes.Status200OK);
 
             return group;
         }
 
-        private static async Task<Dictionary<LanguageIsoCode, LanguageNode>> GetAllLanguages(LanguageIsoCode currentLangCode)
+        private static async Task<Dictionary<LanguageId, LanguageNode>> GetAllLanguages(LanguageId currentLanguageId)
         {
             return await Task.FromResult(HumanLanguages.Languages.LanguagePropertiesDictionary.ToDictionary(l => l.Key, l =>
             {
                 var languageProperties = HumanLanguages.Languages.LanguagePropertiesDictionary[l.Key];
                 var localName = languageProperties.LanguageNames[l.Key];
-                var nameInCurrentLanguage = languageProperties.LanguageNames[currentLangCode];
+                var nameInCurrentLanguage = languageProperties.LanguageNames[currentLanguageId];
+                var languageIsoCodesWIthLocales = new Dictionary<string, string>() { { l.Key.ToString(), (localName == nameInCurrentLanguage || string.IsNullOrWhiteSpace(nameInCurrentLanguage) ? localName : $"{localName} ({nameInCurrentLanguage})") } };
+
                 return new LanguageNode(
-                    IsSelected: currentLangCode == l.Key,
-                    DisplayName: (localName == nameInCurrentLanguage || string.IsNullOrWhiteSpace(nameInCurrentLanguage) ? localName : $"{localName} ({nameInCurrentLanguage})"));
+                    IsSelected: currentLanguageId == l.Key,
+                    LanguageIsoCodesWithLocales: languageIsoCodesWIthLocales.Union(languageProperties.VariationNativeNames.ToDictionary(v => $"{l.Key}-{v.Key}", v => v.Value)).ToDictionary());
             }));
         }
     }
