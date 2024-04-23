@@ -1,4 +1,4 @@
 ﻿namespace FunWithAPIs.Languages
 {
-    public sealed record LanguageNode(bool IsSelected, string DisplayName);
+    public sealed record LanguageNode(bool IsSelected, Dictionary<string, string> LanguageIsoCodesWithLocales);
 }

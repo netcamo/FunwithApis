@@ -5,45 +5,38 @@ namespace FunWithAPIs.Translations
     public static class TranslationsEndpoints
     {
 
-        private const string SpecificTranslationsRoute = "/translations/{currentLanguageIsoCode}/";
+        private const string SpecificTranslationsRoute = "/translations/{currentLanguageIsoCodeString}/";
         public static RouteGroupBuilder GroupTranslationsApisV1(this RouteGroupBuilder group)
         {
 
-            group.MapGet(SpecificTranslationsRoute, async (string currentLanguageIsoCode = "en-US") =>
+            group.MapGet(SpecificTranslationsRoute, async (string currentLanguageIsoCodeString = "en-US") =>
             {
-                var lang = currentLanguageIsoCode.Split('-');
-                if (Enum.TryParse<LanguageIsoCode>(lang.First(), out LanguageIsoCode currentLangCode)) 
+                var currentLanguageIsoCode = HumanHelper.CreateLanguageIsoCode(currentLanguageIsoCodeString);
+                var transalations = await SpecificTranslations(currentLanguageIsoCode.LanguageId);
+                return Results.Ok(transalations.ToDictionary(t => t.Key, t =>
                 {
-                    var transalations = await SpecificTranslations(currentLangCode);
-                    if (lang.Length == 1)
+                    if (t.Value is null)
                     {
-                        return Results.Ok(transalations.ToDictionary(d => d.Key, d => d.Value?.FirstOrDefault(dd => dd.Key == LanguageVariationIsoCode.Default).Value ?? ""));
+                        return t.Key;
                     }
-                    return Results.Ok(transalations.ToDictionary(d => d.Key, d =>
+                    if (t.Value.TryGetValue(currentLanguageIsoCode.LanguageLocaleVariationCode, out string? localeValue) && !string.IsNullOrWhiteSpace(localeValue))
                     {
-                        if (Enum.TryParse<LanguageVariationIsoCode>(lang.Last(), out LanguageVariationIsoCode languageVariationIsoCode))
-                        {
-                            var languageVariationTransalation = d.Value?.FirstOrDefault(dd => dd.Key == languageVariationIsoCode).Value;
-                            if (!string.IsNullOrEmpty(languageVariationTransalation))
-                            {
-                                return languageVariationTransalation;
-                            }
-                        }
-                        return d.Value?.FirstOrDefault(dd => dd.Key == LanguageVariationIsoCode.Default).Value ?? "";
-                    }));
-                }
-                return Results.NotFound(currentLanguageIsoCode);
+                        return localeValue;
+                    }
+                    if (t.Value.TryGetValue(LanguageLocaleVariationCode.Default, out string? defaultValue) && !string.IsNullOrWhiteSpace(defaultValue))
+                    {
+                        return defaultValue;
+                    }
+                    return t.Key;
+                }));
             })
-            .Produces<Dictionary<string, string>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces<Dictionary<string, string>>(StatusCodes.Status200OK);
             return group;
         }
 
-        private static async Task<Dictionary<string, Dictionary<LanguageVariationIsoCode, string>?>> SpecificTranslations(LanguageIsoCode currentLangCode)
+        private static async Task<Dictionary<string, Dictionary<LanguageLocaleVariationCode, string>?>> SpecificTranslations(LanguageId currentLangCode)
         {
-            return await Task.FromResult(HumanLanguages.Translations.TranslationsDictionary.ToDictionary(d => d.Key.ToString(),
-                        d => d.Value.TryGetValue(currentLangCode, out Dictionary<LanguageVariationIsoCode, string>? value) ? value : null
-                    ));
+            return await Task.FromResult(Translations.TranslationsDictionary.ToDictionary(d => d.Key.ToString(), d => d.Value.TryGetValue(currentLangCode, out var value) ? value : null));
         }
     }
 }
