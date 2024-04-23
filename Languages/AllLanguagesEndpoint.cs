@@ -24,11 +24,12 @@ namespace FunWithAPIs.Languages
                 var languageProperties = HumanLanguages.Languages.LanguagePropertiesDictionary[l.Key];
                 var localName = languageProperties.LanguageNames[l.Key];
                 var nameInCurrentLanguage = languageProperties.LanguageNames[currentLanguageId];
-                var languageIsoCodesWIthLocales = new Dictionary<string, string>() { { l.Key.ToString(), (localName == nameInCurrentLanguage || string.IsNullOrWhiteSpace(nameInCurrentLanguage) ? localName : $"{localName} ({nameInCurrentLanguage})") } };
+                var languageNameInBothLanguages = (localName == nameInCurrentLanguage || string.IsNullOrWhiteSpace(nameInCurrentLanguage) ? localName : $"{localName} ({nameInCurrentLanguage})");
+                var languageIsoCodesWIthLocales = new Dictionary<string, string>() { { l.Key.ToString(), languageNameInBothLanguages } };
 
                 return new LanguageNode(
                     IsSelected: currentLanguageId == l.Key,
-                    LanguageIsoCodesWithLocales: languageIsoCodesWIthLocales.Union(languageProperties.VariationNativeNames.ToDictionary(v => $"{l.Key}-{v.Key}", v => v.Value)).ToDictionary());
+                    LanguageIsoCodesWithLocales: languageIsoCodesWIthLocales.Union(languageProperties.VariationNativeNames.ToDictionary(v => $"{l.Key}-{v.Key}", v => $"{languageNameInBothLanguages} - {v.Value}" )).ToDictionary());
             }));
         }
     }
